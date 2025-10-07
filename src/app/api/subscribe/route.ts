@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { initializeApp, getApps, getApp } from "firebase/app"
-import { getFirestore, collection, addDoc } from "firebase/firestore"
+import { getFirestore, collection, addDoc, Timestamp } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -22,17 +22,83 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
     }
 
-    await addDoc(collection(db, "subscribers"), {
+    // Extract Cloudflare data from request headers
+    const ip = request.headers.get("cf-connecting-ip") || 
+               request.headers.get("x-forwarded-for") || 
+               request.headers.get("x-real-ip") || 
+               request.ip ||
+               "Unknown"
+    
+    const country = request.headers.get("cf-ipcountry") || "Unknown"
+    const city = request.headers.get("cf-ipcity") || "Unknown"
+    const region = request.headers.get("cf-region") || "Unknown"
+    const timezone = request.headers.get("cf-timezone") || "Unknown"
+    const latitude = request.headers.get("cf-iplat") || "Unknown"
+    const longitude = request.headers.get("cf-iplon") || "Unknown"
+    
+    // Additional request metadata
+    const userAgent = request.headers.get("user-agent") || "Unknown"
+    const host = request.headers.get("host") || "Unknown"
+    const referer = request.headers.get("referer") || "Direct"
+    const acceptLanguage = request.headers.get("accept-language") || "Unknown"
+    
+    // Cloudflare specific headers
+    const cfRay = request.headers.get("cf-ray") || "Unknown"
+    const cfVisitor = request.headers.get("cf-visitor") || "Unknown"
+    
+    // Get the full URL path
+    const url = new URL(request.url)
+    const path = url.pathname
+
+    // Store comprehensive data in Firebase
+    const subscriberData = {
       email,
-      subscribedAt: new Date(),
+      timestamp: Timestamp.now(),
+      subscribedAt: new Date().toISOString(),
+      
+      // IP and Location Data
+      ip,
+      country,
+      city,
+      region,
+      timezone,
+      latitude,
+      longitude,
+      
+      // Request Metadata
+      host,
+      path,
+      referer,
+      userAgent,
+      acceptLanguage,
+      
+      // Cloudflare Specific
+      cfRay,
+      cfVisitor,
+      
+      // Source
       source: "coming-soon-page",
+    }
+
+    await addDoc(collection(db, "subscribers"), subscriberData)
+
+    console.log("✅ Email subscription with full data:", {
+      email,
+      ip,
+      country,
+      city,
     })
 
-    console.log("✅ Email subscription:", email)
-
-    return NextResponse.json({ message: "Successfully subscribed!" }, { status: 200 })
+    return NextResponse.json({ 
+      message: "Successfully subscribed!",
+      success: true 
+    }, { status: 200 })
+    
   } catch (error) {
     console.error("❌ Subscription error:", error)
-    return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Failed to subscribe",
+      success: false 
+    }, { status: 500 })
   }
 }
