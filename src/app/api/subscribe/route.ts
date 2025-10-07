@@ -22,41 +22,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
     }
 
-    // Extract Cloudflare data from request headers
-    const ip = request.headers.get("cf-connecting-ip") || 
-               request.headers.get("x-forwarded-for") || 
-               request.headers.get("x-real-ip") || 
-               request.ip ||
-               "Unknown"
-    
+    // ✅ Safely extract IP address (NextRequest has no .ip property)
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "Unknown"
+
     const country = request.headers.get("cf-ipcountry") || "Unknown"
     const city = request.headers.get("cf-ipcity") || "Unknown"
     const region = request.headers.get("cf-region") || "Unknown"
     const timezone = request.headers.get("cf-timezone") || "Unknown"
     const latitude = request.headers.get("cf-iplat") || "Unknown"
     const longitude = request.headers.get("cf-iplon") || "Unknown"
-    
-    // Additional request metadata
+
     const userAgent = request.headers.get("user-agent") || "Unknown"
     const host = request.headers.get("host") || "Unknown"
     const referer = request.headers.get("referer") || "Direct"
     const acceptLanguage = request.headers.get("accept-language") || "Unknown"
-    
-    // Cloudflare specific headers
     const cfRay = request.headers.get("cf-ray") || "Unknown"
     const cfVisitor = request.headers.get("cf-visitor") || "Unknown"
-    
-    // Get the full URL path
+
     const url = new URL(request.url)
     const path = url.pathname
 
-    // Store comprehensive data in Firebase
     const subscriberData = {
       email,
       timestamp: Timestamp.now(),
       subscribedAt: new Date().toISOString(),
-      
-      // IP and Location Data
       ip,
       country,
       city,
@@ -64,19 +57,13 @@ export async function POST(request: NextRequest) {
       timezone,
       latitude,
       longitude,
-      
-      // Request Metadata
       host,
       path,
       referer,
       userAgent,
       acceptLanguage,
-      
-      // Cloudflare Specific
       cfRay,
       cfVisitor,
-      
-      // Source
       source: "coming-soon-page",
     }
 
@@ -89,16 +76,15 @@ export async function POST(request: NextRequest) {
       city,
     })
 
-    return NextResponse.json({ 
-      message: "Successfully subscribed!",
-      success: true 
-    }, { status: 200 })
-    
+    return NextResponse.json(
+      { message: "Successfully subscribed!", success: true },
+      { status: 200 }
+    )
   } catch (error) {
     console.error("❌ Subscription error:", error)
-    return NextResponse.json({ 
-      error: "Failed to subscribe",
-      success: false 
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to subscribe", success: false },
+      { status: 500 }
+    )
   }
 }
