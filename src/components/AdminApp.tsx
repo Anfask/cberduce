@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Shield, LogOut, Eye, Mail, Clock, MapPin, Server, ExternalLink, Info } from "lucide-react"
+import { Shield, LogOut, Eye, Mail, Clock, MapPin, Server, ExternalLink, Info, X } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore"
@@ -377,11 +377,18 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
         </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* Detail Modal - WITH CLOSE BUTTON */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-mono text-primary">COMPLETE VISITOR DATA</DialogTitle>
+            <button
+              onClick={() => setIsDialogOpen(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none text-primary"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
           </DialogHeader>
 
           {selectedVisitor && (

@@ -2,7 +2,6 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Globe, Server, MapPin, Monitor, Link2, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 interface VisitorData {
   email: string
@@ -26,7 +25,7 @@ interface VisitorData {
 const formatDate = (timestamp: unknown) => {
   if (!timestamp) return "N/A"
   let date: Date
-  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
     date = (timestamp as { toDate: () => Date }).toDate()
   } else if (timestamp instanceof Date) {
     date = timestamp
@@ -36,11 +35,11 @@ const formatDate = (timestamp: unknown) => {
   return date.toLocaleString()
 }
 
-export function VisitorDetailModal({
-  visitor,
-  isOpen,
-  onClose,
-}: {
+export function VisitorDetailModal({ 
+  visitor, 
+  isOpen, 
+  onClose 
+}: { 
   visitor: VisitorData | null
   isOpen: boolean
   onClose: () => void
@@ -49,21 +48,18 @@ export function VisitorDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl relative">
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
-          onClick={onClose}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-mono text-primary">VISITOR DETAILS</DialogTitle>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none text-primary"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
         </DialogHeader>
-
+        
         <div className="space-y-6 font-mono text-sm">
           {/* Contact Info */}
           <div>
@@ -72,12 +68,8 @@ export function VisitorDetailModal({
               CONTACT INFORMATION
             </h3>
             <div className="space-y-1 text-muted-foreground">
-              <p>
-                <span className="text-foreground">Email:</span> {visitor.email}
-              </p>
-              <p>
-                <span className="text-foreground">Subscribed:</span> {formatDate(visitor.timestamp)}
-              </p>
+              <p><span className="text-foreground">Email:</span> {visitor.email}</p>
+              <p><span className="text-foreground">Subscribed:</span> {formatDate(visitor.timestamp)}</p>
             </div>
           </div>
 
@@ -88,12 +80,8 @@ export function VisitorDetailModal({
               NETWORK INFORMATION
             </h3>
             <div className="space-y-1 text-muted-foreground">
-              <p>
-                <span className="text-foreground">IP Address:</span> {visitor.ip}
-              </p>
-              <p>
-                <span className="text-foreground">CF-Ray:</span> {visitor.cfRay || "N/A"}
-              </p>
+              <p><span className="text-foreground">IP Address:</span> {visitor.ip}</p>
+              <p><span className="text-foreground">CF-Ray:</span> {visitor.cfRay || "N/A"}</p>
             </div>
           </div>
 
@@ -104,24 +92,11 @@ export function VisitorDetailModal({
               LOCATION DATA
             </h3>
             <div className="space-y-1 text-muted-foreground">
-              <p>
-                <span className="text-foreground">Country:</span> {visitor.country}
-              </p>
-              <p>
-                <span className="text-foreground">City:</span> {visitor.city || "N/A"}
-              </p>
-              <p>
-                <span className="text-foreground">Region:</span> {visitor.region || "N/A"}
-              </p>
-              <p>
-                <span className="text-foreground">Timezone:</span> {visitor.timezone || "N/A"}
-              </p>
-              <p>
-                <span className="text-foreground">Coordinates:</span>{" "}
-                {visitor.latitude && visitor.longitude
-                  ? `${visitor.latitude}, ${visitor.longitude}`
-                  : "N/A"}
-              </p>
+              <p><span className="text-foreground">Country:</span> {visitor.country}</p>
+              <p><span className="text-foreground">City:</span> {visitor.city || "N/A"}</p>
+              <p><span className="text-foreground">Region:</span> {visitor.region || "N/A"}</p>
+              <p><span className="text-foreground">Timezone:</span> {visitor.timezone || "N/A"}</p>
+              <p><span className="text-foreground">Coordinates:</span> {visitor.latitude && visitor.longitude ? `${visitor.latitude}, ${visitor.longitude}` : "N/A"}</p>
             </div>
           </div>
 
@@ -132,18 +107,10 @@ export function VisitorDetailModal({
               REQUEST DETAILS
             </h3>
             <div className="space-y-1 text-muted-foreground">
-              <p>
-                <span className="text-foreground">Host:</span> {visitor.host}
-              </p>
-              <p>
-                <span className="text-foreground">Path:</span> {visitor.path}
-              </p>
-              <p>
-                <span className="text-foreground">Referer:</span> {visitor.referer || "Direct"}
-              </p>
-              <p>
-                <span className="text-foreground">Language:</span> {visitor.acceptLanguage || "N/A"}
-              </p>
+              <p><span className="text-foreground">Host:</span> {visitor.host}</p>
+              <p><span className="text-foreground">Path:</span> {visitor.path}</p>
+              <p><span className="text-foreground">Referer:</span> {visitor.referer || "Direct"}</p>
+              <p><span className="text-foreground">Language:</span> {visitor.acceptLanguage || "N/A"}</p>
             </div>
           </div>
 
@@ -154,9 +121,7 @@ export function VisitorDetailModal({
               DEVICE INFORMATION
             </h3>
             <div className="space-y-1 text-muted-foreground">
-              <p className="break-all">
-                <span className="text-foreground">User Agent:</span> {visitor.userAgent}
-              </p>
+              <p className="break-all"><span className="text-foreground">User Agent:</span> {visitor.userAgent}</p>
             </div>
           </div>
         </div>
