@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Shield, LogOut, Eye, Mail, Clock, MapPin, Server, ExternalLink, Info } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
@@ -154,6 +155,7 @@ function AdminLogin({ onLogin }: { onLogin: (email: string, password: string) =>
 function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () => void }) {
   const [visitors, setVisitors] = useState<VisitorData[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedVisitor, setSelectedVisitor] = useState<VisitorData | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, "subscribers"), orderBy("timestamp", "desc"))
@@ -311,11 +313,8 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
                     <TableHead className="font-mono text-primary">SOURCE IP</TableHead>
                     <TableHead className="font-mono text-primary">LOCATION</TableHead>
                     <TableHead className="font-mono text-primary">COORDINATES</TableHead>
-                    <TableHead className="font-mono text-primary">TIMEZONE</TableHead>
                     <TableHead className="font-mono text-primary">TIME</TableHead>
-                    <TableHead className="font-mono text-primary">HOST</TableHead>
-                    <TableHead className="font-mono text-primary">REFERER</TableHead>
-                    <TableHead className="font-mono text-primary">CF-RAY</TableHead>
+                    <TableHead className="font-mono text-primary">ACTIONS</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -330,25 +329,22 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
                       <TableCell className="font-mono text-sm">
                         <div className="flex items-center space-x-2">
                           <Server className="w-4 h-4 text-muted-foreground" />
-                          <span>{visitor.ip || "N/A"}</span>
+                          <span>{visitor.ip}</span>
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         <div className="flex items-center space-x-2">
                           <MapPin className="w-4 h-4 text-muted-foreground" />
                           <div className="flex flex-col">
-                            <span>{visitor.city || "Unknown"}, {visitor.region || ""}</span>
-                            <span className="text-xs text-muted-foreground">{visitor.country || "N/A"}</span>
+                            <span>{visitor.city}, {visitor.region}</span>
+                            <span className="text-xs text-muted-foreground">{visitor.country}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {visitor.latitude && visitor.longitude 
+                        {visitor.latitude !== "Unknown" && visitor.longitude !== "Unknown"
                           ? `${visitor.latitude}, ${visitor.longitude}`
                           : "N/A"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {visitor.timezone || "N/A"}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         <div className="flex items-center space-x-2">
@@ -356,14 +352,16 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
                           <span>{formatDate(visitor.timestamp)}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        {visitor.host || "N/A"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground max-w-xs truncate">
-                        {visitor.referer || "Direct"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {visitor.cfRay || "N/A"}
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedVisitor(visitor)}
+                          className="font-mono text-xs"
+                        >
+                          <Info className="w-3 h-3 mr-1" />
+                          VIEW ALL
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -373,6 +371,143 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
           )}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {selectedVisitor && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-primary/20 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-primary/20 flex items-center justify-between sticky top-0 bg-card">
+              <h2 className="text-xl font-bold text-primary font-mono">COMPLETE VISITOR DATA</h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedVisitor(null)}
+                className="font-mono"
+              >
+                CLOSE
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Email & Basic Info */}
+              <div className="space-y-3">
+                <h3 className="text-primary font-mono font-semibold flex items-center">
+                  <Mail className="w-4 h-4 mr-2" />
+                  CONTACT INFORMATION
+                </h3>
+                <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Email:</span>
+                    <p className="text-foreground">{selectedVisitor.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Source:</span>
+                    <p className="text-foreground">{selectedVisitor.source}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Subscribed At:</span>
+                    <p className="text-foreground">{formatDate(selectedVisitor.timestamp)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Network Info */}
+              <div className="space-y-3">
+                <h3 className="text-primary font-mono font-semibold flex items-center">
+                  <Server className="w-4 h-4 mr-2" />
+                  NETWORK INFORMATION
+                </h3>
+                <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                  <div>
+                    <span className="text-muted-foreground">IP Address:</span>
+                    <p className="text-foreground">{selectedVisitor.ip}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">CF-Ray:</span>
+                    <p className="text-foreground">{selectedVisitor.cfRay}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">CF-Visitor:</span>
+                    <p className="text-foreground break-all">{selectedVisitor.cfVisitor}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="space-y-3">
+                <h3 className="text-primary font-mono font-semibold flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  LOCATION DATA
+                </h3>
+                <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Country:</span>
+                    <p className="text-foreground">{selectedVisitor.country}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">City:</span>
+                    <p className="text-foreground">{selectedVisitor.city}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Region:</span>
+                    <p className="text-foreground">{selectedVisitor.region}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Timezone:</span>
+                    <p className="text-foreground">{selectedVisitor.timezone}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Coordinates:</span>
+                    <p className="text-foreground">
+                      {selectedVisitor.latitude !== "Unknown" && selectedVisitor.longitude !== "Unknown"
+                        ? `${selectedVisitor.latitude}, ${selectedVisitor.longitude}`
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Request Details */}
+              <div className="space-y-3">
+                <h3 className="text-primary font-mono font-semibold flex items-center">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  REQUEST DETAILS
+                </h3>
+                <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Host:</span>
+                    <p className="text-foreground">{selectedVisitor.host}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Path:</span>
+                    <p className="text-foreground">{selectedVisitor.path}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Referer:</span>
+                    <p className="text-foreground break-all">{selectedVisitor.referer}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Accept Language:</span>
+                    <p className="text-foreground">{selectedVisitor.acceptLanguage}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Device Info */}
+              <div className="space-y-3">
+                <h3 className="text-primary font-mono font-semibold flex items-center">
+                  <Server className="w-4 h-4 mr-2" />
+                  DEVICE INFORMATION
+                </h3>
+                <div className="font-mono text-sm">
+                  <span className="text-muted-foreground">User Agent:</span>
+                  <p className="text-foreground break-all mt-1">{selectedVisitor.userAgent}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
