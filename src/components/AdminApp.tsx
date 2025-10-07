@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Shield, LogOut, Eye, Mail, Clock, MapPin, Server, ExternalLink, Info } from "lucide-react"
 import { auth, db } from "@/lib/firebase"
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
-import { collection, query, orderBy, onSnapshot, getDocs } from "firebase/firestore"
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore"
 
 interface VisitorData {
   id: string
@@ -20,7 +20,7 @@ interface VisitorData {
   timezone?: string
   latitude?: string
   longitude?: string
-  timestamp: any
+  timestamp: unknown
   subscribedAt?: string
   host: string
   path: string
@@ -75,8 +75,9 @@ function AdminLogin({ onLogin }: { onLogin: (email: string, password: string) =>
 
     try {
       await onLogin(email, password)
-    } catch (err: any) {
-      setError(err.message || "Authentication failed. Please check your credentials.")
+    } catch (err) {
+      const error = err as Error
+      setError(error.message || "Authentication failed. Please check your credentials.")
     } finally {
       setIsLoading(false)
     }
@@ -156,6 +157,7 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
   const [visitors, setVisitors] = useState<VisitorData[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedVisitor, setSelectedVisitor] = useState<VisitorData | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
     const q = query(collection(db, "subscribers"), orderBy("timestamp", "desc"))
@@ -174,8 +176,8 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
           timezone: data.timezone || "Unknown",
           latitude: data.latitude || "Unknown",
           longitude: data.longitude || "Unknown",
-          timestamp: data.timestamp,
-          subscribedAt: data.subscribedAt,
+          timestamp: data.timestamp || null,
+          subscribedAt: data.subscribedAt || "",
           host: data.host || "Unknown",
           path: data.path || "/",
           userAgent: data.userAgent || "Unknown",
@@ -196,16 +198,16 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
     return () => unsubscribe()
   }, [])
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: unknown) => {
     if (!timestamp) return "N/A"
     
     let date: Date
-    if (timestamp.toDate) {
+    if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
       date = timestamp.toDate()
     } else if (timestamp instanceof Date) {
       date = timestamp
     } else {
-      date = new Date(timestamp)
+      date = new Date(timestamp as string)
     }
 
     return date.toLocaleString("en-US", {
@@ -356,7 +358,10 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedVisitor(visitor)}
+                          onClick={() => {
+                            setSelectedVisitor(visitor)
+                            setIsDialogOpen(true)
+                          }}
                           className="font-mono text-xs"
                         >
                           <Info className="w-3 h-3 mr-1" />
@@ -373,21 +378,13 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
       </div>
 
       {/* Detail Modal */}
-      {selectedVisitor && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-primary/20 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-primary/20 flex items-center justify-between sticky top-0 bg-card">
-              <h2 className="text-xl font-bold text-primary font-mono">COMPLETE VISITOR DATA</h2>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedVisitor(null)}
-                className="font-mono"
-              >
-                CLOSE
-              </Button>
-            </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-primary">COMPLETE VISITOR DATA</DialogTitle>
+          </DialogHeader>
 
+          {selectedVisitor && (
             <div className="p-6 space-y-6">
               {/* Email & Basic Info */}
               <div className="space-y-3">
@@ -505,9 +502,9 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

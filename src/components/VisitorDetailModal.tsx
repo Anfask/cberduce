@@ -1,7 +1,7 @@
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Globe, Server, MapPin, Clock, Monitor, Link2 } from "lucide-react"
+import { Globe, Server, MapPin, Monitor, Link2 } from "lucide-react"
 
 interface VisitorData {
   email: string
@@ -12,7 +12,7 @@ interface VisitorData {
   timezone?: string
   latitude?: string
   longitude?: string
-  timestamp: any
+  timestamp: unknown
   host: string
   path: string
   userAgent: string
@@ -20,6 +20,19 @@ interface VisitorData {
   acceptLanguage?: string
   cfRay?: string
   source?: string
+}
+
+const formatDate = (timestamp: unknown) => {
+  if (!timestamp) return "N/A"
+  let date: Date
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    date = (timestamp as { toDate: () => Date }).toDate()
+  } else if (timestamp instanceof Date) {
+    date = timestamp
+  } else {
+    date = new Date(timestamp as string)
+  }
+  return date.toLocaleString()
 }
 
 export function VisitorDetailModal({ 
@@ -32,15 +45,6 @@ export function VisitorDetailModal({
   onClose: () => void
 }) {
   if (!visitor) return null
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A"
-    let date: Date
-    if (timestamp.toDate) date = timestamp.toDate()
-    else if (timestamp instanceof Date) date = timestamp
-    else date = new Date(timestamp)
-    return date.toLocaleString()
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
