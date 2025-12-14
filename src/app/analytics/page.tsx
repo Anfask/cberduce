@@ -18,20 +18,30 @@ interface VisitorData {
   timestamp: any;
 }
 
+interface MousePosition {
+  x: number;
+  y: number;
+}
+
+interface RotationVelocity {
+  x: number;
+  y: number;
+}
+
 export default function AnalyticsGlobe() {
-  const mountRef = useRef(null);
-  const sceneRef = useRef(null);
-  const cameraRef = useRef(null);
-  const rendererRef = useRef(null);
-  const globeRef = useRef(null);
-  const pointsRef = useRef([]);
-  const cloudRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const previousMousePositionRef = useRef({ x: 0, y: 0 });
-  const rotationVelocityRef = useRef({ x: 0, y: 0 });
+  const mountRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const globeRef = useRef<THREE.Mesh | null>(null);
+  const pointsRef = useRef<THREE.Object3D[]>([]);
+  const cloudRef = useRef<THREE.Mesh | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const previousMousePositionRef = useRef<MousePosition>({ x: 0, y: 0 });
+  const rotationVelocityRef = useRef<RotationVelocity>({ x: 0, y: 0 });
   
   const [visitors, setVisitors] = useState<VisitorData[]>([]);
-  const [visitorsByCountry, setVisitorsByCountry] = useState({});
+  const [visitorsByCountry, setVisitorsByCountry] = useState<Record<string, number>>({});
 
   // Fetch visitors from Firebase
   useEffect(() => {
@@ -43,13 +53,13 @@ export default function AnalyticsGlobe() {
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const visitorsData: VisitorData[] = [];
-      const countryMap = {};
+      const countryMap: Record<string, number> = {};
       
       snapshot.forEach((doc) => {
         const data = doc.data();
         if (data.latitude && data.longitude && 
             data.latitude !== "Unknown" && data.longitude !== "Unknown") {
-          const visitor = {
+          const visitor: VisitorData = {
             id: doc.id,
             email: data.email || "N/A",
             ip: data.ip || "Unknown",
@@ -99,8 +109,6 @@ export default function AnalyticsGlobe() {
 
     // Create realistic Earth
     const globeGeometry = new THREE.SphereGeometry(1, 128, 128);
-    
-    // Create realistic Earth texture
     const earthTexture = createRealisticEarthTexture();
     
     const globeMaterial = new THREE.MeshPhongMaterial({
@@ -168,7 +176,7 @@ export default function AnalyticsGlobe() {
     addStars(scene);
 
     // Mouse drag controls
-    const handleMouseDown = (event) => {
+    const handleMouseDown = (event: MouseEvent) => {
       isDraggingRef.current = true;
       previousMousePositionRef.current = {
         x: event.clientX,
@@ -176,7 +184,7 @@ export default function AnalyticsGlobe() {
       };
     };
 
-    const handleMouseMove = (event) => {
+    const handleMouseMove = (event: MouseEvent) => {
       if (!isDraggingRef.current) return;
 
       const deltaX = event.clientX - previousMousePositionRef.current.x;
@@ -197,7 +205,7 @@ export default function AnalyticsGlobe() {
       isDraggingRef.current = false;
     };
 
-    const handleTouchStart = (event) => {
+    const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length === 1) {
         isDraggingRef.current = true;
         previousMousePositionRef.current = {
@@ -207,7 +215,7 @@ export default function AnalyticsGlobe() {
       }
     };
 
-    const handleTouchMove = (event) => {
+    const handleTouchMove = (event: TouchEvent) => {
       if (!isDraggingRef.current || event.touches.length !== 1) return;
 
       const deltaX = event.touches[0].clientX - previousMousePositionRef.current.x;
@@ -236,29 +244,32 @@ export default function AnalyticsGlobe() {
     renderer.domElement.addEventListener('touchend', handleTouchEnd);
 
     const handleResize = () => {
-      if (!mountRef.current) return;
+      if (!mountRef.current || !cameraRef.current) return;
+      const camera = cameraRef.current;
       camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     };
     window.addEventListener('resize', handleResize);
 
-    let animationId;
+    let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
 
-      // Earth rotation - realistic speed (24 hour day = 0.00007 rad/frame at 60fps)
+      if (!globeRef.current) return;
+
+      // Earth rotation
       if (!isDraggingRef.current) {
-        globe.rotation.y += 0.0005; // Slightly faster for visibility
+        globeRef.current.rotation.y += 0.0005;
         if (cloudRef.current) {
-          cloudRef.current.rotation.y += 0.0007; // Clouds move slightly faster
+          cloudRef.current.rotation.y += 0.0007;
         }
       } else {
-        globe.rotation.x += rotationVelocityRef.current.x;
-        globe.rotation.y += rotationVelocityRef.current.y;
+        globeRef.current.rotation.x += rotationVelocityRef.current.x;
+        globeRef.current.rotation.y += rotationVelocityRef.current.y;
         if (cloudRef.current) {
-          cloudRef.current.rotation.x = globe.rotation.x;
-          cloudRef.current.rotation.y = globe.rotation.y;
+          cloudRef.current.rotation.x = globeRef.current.rotation.x;
+          cloudRef.current.rotation.y = globeRef.current.rotation.y;
         }
       }
 
@@ -298,18 +309,20 @@ export default function AnalyticsGlobe() {
     if (!sceneRef.current || !globeRef.current) return;
 
     pointsRef.current.forEach(point => {
-      sceneRef.current.remove(point);
+      sceneRef.current?.remove(point);
     });
     pointsRef.current = [];
 
     addVisitorPoints(sceneRef.current, globeRef.current, visitors);
   }, [visitors]);
 
-  function createRealisticEarthTexture() {
+  function createRealisticEarthTexture(): THREE.Texture {
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
+
+    if (!ctx) return new THREE.CanvasTexture(canvas);
 
     // Ocean - realistic blue
     const oceanGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -324,7 +337,6 @@ export default function AnalyticsGlobe() {
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 15;
 
-    // Draw continents with more detail
     // North America
     ctx.beginPath();
     ctx.ellipse(280, 280, 220, 270, 0.3, 0, Math.PI * 2);
@@ -372,11 +384,13 @@ export default function AnalyticsGlobe() {
     return texture;
   }
 
-  function createCloudTexture() {
+  function createCloudTexture(): THREE.Texture {
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
+
+    if (!ctx) return new THREE.CanvasTexture(canvas);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -397,10 +411,10 @@ export default function AnalyticsGlobe() {
     return texture;
   }
 
-  function addVisitorPoints(scene, globe, visitors) {
+  function addVisitorPoints(scene: THREE.Scene, globe: THREE.Mesh, visitors: VisitorData[]) {
     visitors.forEach((visitor, index) => {
-      const lat = parseFloat(visitor.latitude);
-      const lon = parseFloat(visitor.longitude);
+      const lat = parseFloat(visitor.latitude || '0');
+      const lon = parseFloat(visitor.longitude || '0');
 
       if (isNaN(lat) || isNaN(lon)) return;
 
@@ -441,7 +455,6 @@ export default function AnalyticsGlobe() {
       const lineMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
       const line = new THREE.Mesh(lineGeometry, lineMaterial);
       
-      // Position line between point and surface
       const surfaceX = -Math.sin(phi) * Math.cos(theta);
       const surfaceZ = Math.sin(phi) * Math.sin(theta);
       const surfaceY = Math.cos(phi);
@@ -457,7 +470,7 @@ export default function AnalyticsGlobe() {
     });
   }
 
-  function addStars(scene) {
+  function addStars(scene: THREE.Scene) {
     const starGeometry = new THREE.BufferGeometry();
     const starCount = 5000;
     const positions = new Float32Array(starCount * 3);
@@ -481,15 +494,15 @@ export default function AnalyticsGlobe() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-card border border-primary/20 rounded-lg overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-primary/20 bg-card/80">
+      <div className="bg-card border border-green-500/20 rounded-lg overflow-hidden shadow-2xl">
+        <div className="p-4 border-b border-green-500/20 bg-card/80">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-primary font-mono flex items-center">
+              <h2 className="text-lg font-bold text-green-400 font-mono flex items-center">
                 <Globe className="w-5 h-5 mr-2" />
                 REAL-TIME GLOBAL VISITOR MAP
               </h2>
-              <p className="text-sm text-muted-foreground font-mono mt-1">
+              <p className="text-sm text-green-400/60 font-mono mt-1">
                 Drag to rotate • Live Firebase data • {visitors.length} active locations tracked
               </p>
             </div>
@@ -502,32 +515,32 @@ export default function AnalyticsGlobe() {
           style={{ height: '700px' }}
         />
         
-        <div className="p-4 border-t border-primary/20 bg-card/80">
+        <div className="p-4 border-t border-green-500/20 bg-card/80">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-6 text-sm font-mono">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse shadow-lg shadow-green-400/50"></div>
-                <span className="text-muted-foreground">{visitors.length} Visitors</span>
+                <span className="text-green-400/60">{visitors.length} Visitors</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Globe className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">{Object.keys(visitorsByCountry).length} Countries</span>
+                <Globe className="w-4 h-4 text-green-400" />
+                <span className="text-green-400/60">{Object.keys(visitorsByCountry).length} Countries</span>
               </div>
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-muted-foreground">Real-time Firebase</span>
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-green-400/60">Real-time Firebase</span>
               </div>
             </div>
             <div className="text-xs text-green-400 font-mono">
-              🌍 Realistic Earth Rotation
+              🌍 Live Earth Rotation
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 bg-card border border-primary/20 rounded-lg p-4">
-        <p className="text-sm text-muted-foreground font-mono text-center">
-          💡 <span className="text-green-400">LIVE DATA:</span> Green pins show visitor locations from Firebase • Drag to explore • Auto-rotates like Earth (24-hour cycle simulation)
+      <div className="mt-4 bg-card border border-green-500/20 rounded-lg p-4">
+        <p className="text-sm text-green-400/60 font-mono text-center">
+          💡 <span className="text-green-400">LIVE DATA:</span> Green pins show visitor locations from Firebase • Drag to explore • Real-time updates
         </p>
       </div>
     </div>
