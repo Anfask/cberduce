@@ -9,6 +9,7 @@ import { Shield, LogOut, Eye, Mail, Clock, MapPin, Server, ExternalLink, Info, X
 import { auth, db } from "@/lib/firebase"
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore"
+import AnalyticsGlobe from '@/app/analytics/page'
 
 interface VisitorData {
   id: string
@@ -285,7 +286,6 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
             </div>
           </div>
         </div>
-
         {/* Visitors Table */}
         <div className="bg-card border border-primary/20 rounded-lg overflow-hidden">
           <div className="p-4 border-b border-primary/20">
@@ -376,6 +376,7 @@ function AdminDashboard({ user, onLogout }: { user: FirebaseUser; onLogout: () =
           )}
         </div>
       </div>
+      <AnalyticsGlobe />
 
       {/* Detail Modal - WITH CLOSE BUTTON */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
