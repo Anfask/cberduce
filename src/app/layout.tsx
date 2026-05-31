@@ -13,8 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cyber Security Company - Coming Soon",
-  description: "Building the next generation of enterprise security solutions",
+  title: "Cyberduce | Development & Cyber Security Solutions",
+  description:
+    "Cyberduce delivers elite development and cyber security solutions — custom software, mobile apps with Flutter, and AI-powered enterprise protection.",
+  keywords: "software development, website development, flutter apps, mobile app development, cyber security, threat detection, cyberduce",
+  openGraph: {
+    title: "Cyberduce | Development & Cyber Security Solutions",
+    description: "Enterprise-grade development and cybersecurity services powered by AI.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
